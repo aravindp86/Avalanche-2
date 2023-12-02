@@ -1,60 +1,77 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-//import "hardhat/console.sol";
-
 contract Assessment {
     address payable public owner;
     uint256 public balance;
+    mapping(address => uint256) public shares;  // Mapping to track the shares for each address
 
     event Deposit(uint256 amount);
     event Withdraw(uint256 amount);
+    event MintShares(address indexed shareholder, uint256 amount);
+    event BurnShares(address indexed shareholder, uint256 amount);
+    event TransferShares(address indexed from, address indexed to, uint256 amount);
 
-    constructor(uint initBalance) payable {
+    constructor(uint256 initBalance) payable {
         owner = payable(msg.sender);
         balance = initBalance;
     }
 
-    function getBalance() public view returns(uint256){
+    function getBalance() public view returns (uint256) {
         return balance;
     }
 
-    function deposit(uint256 _amount) public payable {
-        uint _previousBalance = balance;
+    function deposit(uint256 _depositAmount) public payable {
+        uint256 _previousBalance = balance;
 
-        // make sure this is the owner
         require(msg.sender == owner, "You are not the owner of this account");
 
-        // perform transaction
-        balance += _amount;
+        balance += _depositAmount;
 
-        // assert transaction completed successfully
-        assert(balance == _previousBalance + _amount);
+        assert(balance == _previousBalance + _depositAmount);
 
-        // emit the event
-        emit Deposit(_amount);
+        emit Deposit(_depositAmount);
     }
-
-    // custom error
-    error InsufficientBalance(uint256 balance, uint256 withdrawAmount);
 
     function withdraw(uint256 _withdrawAmount) public {
         require(msg.sender == owner, "You are not the owner of this account");
-        uint _previousBalance = balance;
-        if (balance < _withdrawAmount) {
-            revert InsufficientBalance({
-                balance: balance,
-                withdrawAmount: _withdrawAmount
-            });
-        }
+        uint256 _previousBalance = balance;
+        require(balance >= _withdrawAmount, "Insufficient balance");
 
-        // withdraw the given amount
         balance -= _withdrawAmount;
 
-        // assert the balance is correct
         assert(balance == (_previousBalance - _withdrawAmount));
 
-        // emit the event
         emit Withdraw(_withdrawAmount);
+    }
+
+    function mintShares(address _shareholder, uint256 _mintAmount) public {
+        require(msg.sender == owner, "You are not the owner of this account");
+
+        shares[_shareholder] += _mintAmount;
+
+        emit MintShares(_shareholder, _mintAmount);
+    }
+
+    function burnShares(address _shareholder, uint256 _burnAmount) public {
+        require(msg.sender == owner, "You are not the owner of this account");
+        require(shares[_shareholder] >= _burnAmount, "Insufficient shares balance");
+
+        shares[_shareholder] -= _burnAmount;
+
+        emit BurnShares(_shareholder, _burnAmount);
+    }
+
+    function transferShares(address _to, uint256 _transferAmount) public {
+        require(shares[msg.sender] >= _transferAmount, "Insufficient shares balance");
+
+        shares[msg.sender] -= _transferAmount;
+        shares[_to] += _transferAmount;
+
+        emit TransferShares(msg.sender, _to, _transferAmount);
+    }
+
+    function getShareBalance(address _shareholder) public view returns (uint256) {
+        return shares[_shareholder];
     }
 }
