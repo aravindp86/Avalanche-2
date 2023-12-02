@@ -75,3 +75,4 @@ contract Assessment {
         return shares[_shareholder];
     }
 }
+
